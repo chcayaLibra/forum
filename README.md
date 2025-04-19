@@ -18,7 +18,18 @@ pnpm i
 ```bash
 pnpm dev
 ```
-启动后端服务：
+启动后端服务：<br />
+导入database.sql<br />
+在/backend/server.js中填入：
+```js
+const db = mysql.createConnection({
+  host: 'localhost',
+  user: 'root',
+  password: '你的密码',
+  database: '数据库名'
+})
+```
+命令行启动：
 ```bash
 node server.js
 ```
