@@ -1,0 +1,59 @@
+body[data-theme='dark'] {
+  --font-color: rgb(255, 255, 255);
+
+  --theme-color: rgb(27, 25, 25);
+  --theme-aside-color: rgb(0, 0, 0);
+  --aside-shadow: rgba(255, 255, 255, 0.5);
+
+  --active-color: rgb(11, 137, 137);
+
+  --search-bg-color: rgb(98, 120, 123);
+  --search-font-color: rgb(255, 255, 255);
+  --search-placeholder-color: rgba(255, 255, 255, 0.514);
+  --search-chosen-color: rgb(99, 163, 158);
+
+  --postcard-header-color: rgb(49, 50, 50);
+  --postcard-main-color: rgb(75, 75, 75);
+  --postcard-footer-color: rgb(49, 50, 50);
+  --postcard-btn-color: rgb(255, 255, 255);
+  --postcard-btn-hover-color: rgb(187, 187, 187);
+
+  --loading-bg-color: #b1b1b123;
+
+  --login-input-color: rgb(255, 255, 255);
+  --login-hover-color: rgb(212, 212, 212);
+
+  --toggle-btn-color: rgb(255, 255, 255);
+
+  --chat-msg-color: rgb(111, 107, 107);
+}
+
+:root {
+  --font-color: rgb(0, 0, 0);
+
+  --theme-color: white;
+  --theme-aside-color: rgb(255, 255, 255);
+  --aside-shadow: rgba(0, 0, 0, 0.3);
+
+  --active-color: rgb(161, 226, 226);
+
+  --search-bg-color: rgb(191, 225, 228);
+  --search-font-color: rgb(0, 0, 0);
+  --search-placeholder-color: rgba(0, 0, 0, 0.514);
+  --search-chosen-color: rgb(140, 208, 202);
+
+  --postcard-header-color: rgb(229, 244, 248);
+  --postcard-main-color: rgb(255, 255, 255);
+  --postcard-footer-color: rgb(229, 244, 248);
+  --postcard-btn-color: rgb(161, 226, 226);
+  --postcard-btn-hover-color: rgb(136, 184, 184);
+
+  --loading-bg-color: #66666623;
+
+  --login-input-color: rgb(221, 243, 242);
+  --login-hover-color: rgb(195, 213, 212);
+
+  --toggle-btn-color: rgb(220, 220, 220);
+
+  --chat-msg-color: rgb(191, 225, 228);
+}

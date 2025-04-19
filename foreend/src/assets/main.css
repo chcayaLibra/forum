@@ -1,0 +1,25 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  list-style: none;
+  font-family: 'Gill Sans';
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+} */
+
+::selection {
+  background-color: rgba(152, 193, 201, 0.5);
+}
+
+body {
+  height: 100vh;
+  overflow: hidden;
+  color: var(--font-color);
+  background-color: var(--theme-color);
+  transition: all 0.1s ease;
+}
