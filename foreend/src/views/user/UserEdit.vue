@@ -164,7 +164,7 @@ $item-w: clamp(70px, 15vw, 256px);
   gap: $main-gap;
   padding: $main-gap;
 
-  @media (max-width: 375px) {
+  @media (max-width: 376px) {
     width: 100vw;
   }
 
@@ -278,7 +278,7 @@ $item-w: clamp(70px, 15vw, 256px);
       padding: $main-gap * 2;
       background-color: var(--postcard-main-color);
 
-      @media (max-width: 375px) {
+      @media (max-width: 376px) {
         padding: 40px 10px;
       }
       

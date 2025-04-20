@@ -67,7 +67,7 @@ $item-w: clamp(360px, 35vw, 500px);
     }
   }
 
-  @media (max-width: 375px) {
+  @media (max-width: 376px) {
     width: 80vw;
   }
 }

@@ -105,7 +105,7 @@ $main-gap: 20px;
       width: 360px;
       animation: appear 0.5s ease forwards;
 
-      @media (max-width: 375px) {
+      @media (max-width: 376px) {
         width: 80vw;
       }
     }

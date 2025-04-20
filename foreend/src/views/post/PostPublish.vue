@@ -139,6 +139,10 @@ $main-gap: 20px;
   width: 100%;
   height: 100%;
 
+  @media (max-width: 376px) {
+    padding: 0;
+  }
+
   .left {
     display: flex;
     flex-direction: column;

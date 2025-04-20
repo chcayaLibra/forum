@@ -177,7 +177,7 @@ $main-gap: 20px;
   background-color: white;
   opacity: 0.9;
 
-  @media (max-width: 375px) {
+  @media (max-width: 376px) {
     width: 80%;
   }
 
