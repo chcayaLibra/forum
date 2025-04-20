@@ -170,14 +170,16 @@ $main-gap: 20px;
   border-radius: calc($main-gap / 2);
   box-shadow: 0 0 5px var(--aside-shadow);
   width: 350px;
-  // min-width: 40px;
-  // height: 40px;
   white-space: nowrap;
   color: rgb(0, 0, 0);
   font-weight: 400;
   animation: appear 0.7s ease forwards;
   background-color: white;
   opacity: 0.9;
+
+  @media (max-width: 375px) {
+    width: 80%;
+  }
 
   .msg {
     width: 100%;
