@@ -949,6 +949,54 @@ app.post('/user/search', async (req, res) => {
   })
 })
 
+// 用户关注接口
+app.get('/user/follows', (req, res) => {
+  const { userId } = req.query
+  // console.log(req.query)
+  const sql = `select f.user_id, follow_id, username, user_avatar from follows f LEFT JOIN users u on follow_id = u.user_id where f.user_id = ?`
+
+  db.query(sql, [userId], (err, result) => {
+    if (err) {
+      console.error('查询失败: ', err)
+      return res.status(500).json({
+        code: 1,
+        message: '查询失败',
+        error: err.message
+      })
+    }
+
+    res.json({
+      code: 0,
+      message: '查询成功',
+      data: result
+    })
+  })
+})
+
+// 用户粉丝接口
+app.get('/user/fans', (req, res) => {
+  const { userId } = req.query
+  // console.log(req.query)
+  const sql = `select f.user_id, follow_id, username, user_avatar from follows f LEFT JOIN users u on f.user_id = u.user_id where f.follow_id = ?`
+
+  db.query(sql, [userId], (err, result) => {
+    if (err) {
+      console.error('查询失败: ', err)
+      return res.status(500).json({
+        code: 1,
+        message: '查询失败',
+        error: err.message
+      })
+    }
+
+    res.json({
+      code: 0,
+      message: '查询成功',
+      data: result
+    })
+  })
+})
+
 // 验证 Token 中间件
 const verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1]
