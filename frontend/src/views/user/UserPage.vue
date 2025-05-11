@@ -1,7 +1,7 @@
 <script setup>
 import { useUserStore } from '@/stores'
 import UserCard from './components/UserCard.vue'
-import { ref, onMounted, watch, watchEffect } from 'vue'
+import { ref, onMounted, watch, provide } from 'vue'
 import { useRoute } from 'vue-router'
 import router from '@/router'
 
@@ -10,7 +10,6 @@ const userStore = useUserStore()
 const userInfo = ref()
 const userPostList = ref()
 const userCollectPost = ref()
-const flag = ref(false)
 
 watch(
   () => route.query,
@@ -32,7 +31,6 @@ onMounted(async () => {
   userInfo.value = userStore.userInfo
   userPostList.value = userStore.userPostList
   userCollectPost.value = userStore.userCollectPost
-  flag.value = true
 })
 
 const onUpdateList = () => {
@@ -41,11 +39,7 @@ const onUpdateList = () => {
   userCollectPost.value = userStore.userCollectPost
 }
 
-watchEffect(() => {
-  if (flag.value) {
-    onUpdateList()
-  }
-})
+provide('updateCollectInfo', { updateFollowList: onUpdateList })
 </script>
 
 <template>

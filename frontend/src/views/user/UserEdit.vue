@@ -185,19 +185,17 @@ $item-w: clamp(70px, 15vw, 256px);
     box-shadow: 0 0 5px var(--aside-shadow);
 
     .back {
-      width: 32px;
-      height: 32px;
-      font-size: 20px;
+      width: 30px;
+      height: 30px;
       border: none;
       outline: none;
-      background-color: transparent;
-      color: var(--font-color);
+      border-radius: calc($main-gap / 2);
       transition: all 0.3s ease;
+      background-color: var(--postcard-btn-color);
       cursor: pointer;
 
       &:hover {
-        transform: scale(1.2);
-        animation: change 0.7s ease;
+        background-color: var(--postcard-btn-hover-color);
       }
 
       @keyframes change {
@@ -281,7 +279,7 @@ $item-w: clamp(70px, 15vw, 256px);
       @media (max-width: 376px) {
         padding: 40px 10px;
       }
-      
+
       .form {
         display: flex;
         flex-direction: column;

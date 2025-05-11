@@ -17,3 +17,9 @@ export const userPostPublicService = (p_id) =>
 
 export const userPostPrivateService = (p_id) =>
   request.patch(`/post/public/false/${p_id}`)
+
+export const userFollowListService = (user_id) =>
+  request.get(`/user/follows?userId=${user_id}`)
+
+export const userFansListService = (user_id) =>
+  request.get(`/user/fans?userId=${user_id}`)

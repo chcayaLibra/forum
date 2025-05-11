@@ -1,6 +1,6 @@
 <script setup>
 import { followAddService, followDelService } from '@/api/follow'
-import { ref, watch } from 'vue'
+import { ref, watch, inject } from 'vue'
 import { useUserStore, usePostStore, useFollowStore } from '@/stores'
 import showPrompt from '@/utils/promptBox'
 import { useRoute } from 'vue-router'
@@ -30,6 +30,8 @@ const getFollowList = async () => {
   }
 }
 getFollowList()
+
+const { updateFollowList } = inject('updateCollectInfo', {})
 
 let flag = true
 const onFollow = async () => {
@@ -72,12 +74,14 @@ const onFollow = async () => {
     if (route.path.startsWith('/user')) {
       await userStore.getUserCollectPost()
       await userStore.getUserInfo()
+      updateFollowList()
     }
     if (route.path.startsWith('/follow/')) {
       await userStore.getUserCollectPost()
       await followStore.getFollowInfo(followId)
       await followStore.getFollowPostList(followId)
       await followStore.getFollowCollectPost(followId)
+      updateFollowList()
     }
     if (route.path === '/post') {
       await userStore.getUserInfo()

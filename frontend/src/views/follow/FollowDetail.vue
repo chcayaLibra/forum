@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onActivated, watchEffect } from 'vue'
+import { ref, onMounted, onActivated, watchEffect, provide } from 'vue'
 import UserCard from '../user/components/UserCard.vue'
 import { useFollowStore } from '@/stores'
 import { useRoute } from 'vue-router'
@@ -16,9 +16,6 @@ const getFollow = async () => {
   await followStore.getFollowInfo(route.params.id)
   await followStore.getFollowPostList(route.params.id)
   await followStore.getFollowCollectPost(route.params.id)
-  followPostList.value = followStore.followPostList
-  followCollectPost.value = followStore.followCollectPost
-  flag.value = true
 }
 
 onMounted(async () => {
@@ -31,14 +28,11 @@ const updateFollowList = () => {
   followCollectPost.value = followStore.followCollectPost
 }
 
-watchEffect(() => {
-  if (flag.value) {
-    updateFollowList()
-  }
-})
+provide('updateCollectInfo', { updateFollowList })
 
 onActivated(async () => {
   await getFollow()
+  updateFollowList()
 })
 
 const back = async () => {

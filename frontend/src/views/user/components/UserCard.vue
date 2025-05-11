@@ -8,9 +8,14 @@ import ToggleButton from '@/components/ToggleButton.vue'
 import { ref, useTemplateRef, nextTick, onActivated } from 'vue'
 import { useUserStore } from '@/stores'
 import FollowButton from '@/components/FollowButton.vue'
+import { userFansListService, userFollowListService } from '@/api/user'
+import { useRoute } from 'vue-router'
 
+const route = useRoute()
 const isChosen = ref(true)
 const userStore = useUserStore()
+const userFollowList = ref([])
+const userFansList = ref([])
 
 const MIN_GAP = 20
 
@@ -85,6 +90,34 @@ onActivated(() => {
 setTimeout(() => {
   onWaterFail()
 }, 100)
+
+const currentUserId = () => {
+  if (route.fullPath.startsWith('/user')) {
+    return userStore.userId
+  } else {
+    const path = route.path
+    const parts = path.split('/')
+    const followId = parts[2]
+    return followId
+  }
+}
+
+const getUserFollowList = async () => {
+  const res = await userFollowListService(currentUserId())
+  userFollowList.value = res.data.data
+}
+getUserFollowList()
+
+const getUserFansList = async () => {
+  const res = await userFansListService(currentUserId())
+  userFansList.value = res.data.data
+}
+getUserFansList()
+
+const toFollowDetail = (id) => {
+  sessionStorage.setItem(`/follow/${id}`, 0)
+  router.push(`/follow/${id}?redirect=${route.fullPath}`)
+}
 </script>
 
 <template>
@@ -121,9 +154,39 @@ setTimeout(() => {
       <div class="name">{{ props.userInfo?.username }}</div>
       <div class="id">id: {{ props.userInfo?.user_id }}</div>
       <br />
-      <span class="count">{{ props.userInfo?.follows }}关注</span>
-      <span>&nbsp;&nbsp;&nbsp;</span>
-      <span class="count">{{ props.userInfo?.fans }}粉丝</span>
+      <div class="main-item">
+        <div class="follows">
+          <span class="text">{{ props.userInfo?.follows }}关注</span>
+          <div class="follows-box">
+            <ul>
+              <li
+                v-for="(item, index) in userFollowList"
+                :key="index"
+                @click="toFollowDetail(item.follow_id)"
+              >
+                <img :src="baseURL + item.user_avatar" />
+                <span>{{ item.username }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <span>&nbsp;&nbsp;&nbsp;</span>
+        <div class="fans">
+          <span class="text">{{ props.userInfo?.fans }}粉丝</span>
+          <div class="fans-box">
+            <ul>
+              <li
+                v-for="(item, index) in userFansList"
+                :key="index"
+                @click="toFollowDetail(item.user_id)"
+              >
+                <img :src="baseURL + item.user_avatar" />
+                <span>{{ item.username }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="footer">
       <toggle-button @event="toggleEvent">
@@ -245,16 +308,69 @@ $position-size: 200px;
     height: 100px;
     margin-left: $main-gap;
 
+    .main-item {
+      display: flex;
+
+      .text {
+        opacity: 0.6;
+
+        &:hover + .follows-box,
+        &:hover + .fans-box {
+          padding: calc($main-gap / 1.5);
+          grid-template-rows: 1fr;
+        }
+      }
+
+      .follows,
+      .fans {
+        position: relative;
+      }
+
+      .follows-box,
+      .fans-box {
+        position: absolute;
+        z-index: 2;
+        padding: 0;
+        display: grid;
+        grid-template-rows: 0;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border-radius: calc($main-gap / 2);
+        background-color: var(--search-bg-color);
+
+        ul {
+          display: flex;
+          white-space: nowrap;
+          flex-direction: column;
+          gap: calc($main-gap / 2);
+
+          li {
+            display: flex;
+            align-items: center;
+            gap: calc($main-gap / 2);
+            cursor: pointer;
+
+            img {
+              width: 32px;
+              height: 32px;
+              border-radius: 50%;
+            }
+          }
+        }
+
+        &:hover {
+          padding: calc($main-gap / 1.5);
+          grid-template-rows: 1fr;
+        }
+      }
+    }
+
     .name {
       font-weight: bold;
       font-size: 20px;
     }
 
     .id {
-      opacity: 0.6;
-    }
-
-    .count {
       opacity: 0.6;
     }
   }
