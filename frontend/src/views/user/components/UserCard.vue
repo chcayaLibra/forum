@@ -5,14 +5,22 @@ import { baseURL } from '@/utils/request'
 import { waterFall } from '@/utils/waterFall'
 import PostCard from '@/views/post/components/PostCard.vue'
 import ToggleButton from '@/components/ToggleButton.vue'
-import { ref, useTemplateRef, nextTick, onActivated } from 'vue'
-import { useUserStore } from '@/stores'
+import {
+  ref,
+  useTemplateRef,
+  nextTick,
+  onActivated,
+  watch,
+  onMounted
+} from 'vue'
+import { usePostStore, useUserStore } from '@/stores'
 import FollowButton from '@/components/FollowButton.vue'
 import { userFansListService, userFollowListService } from '@/api/user'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
 const isChosen = ref(true)
+const postStore = usePostStore()
 const userStore = useUserStore()
 const userFollowList = ref([])
 const userFansList = ref([])
@@ -25,12 +33,10 @@ const lisRef = useTemplateRef('lis')
 const props = defineProps({
   userInfo: Object,
   userPostList: Array,
-  userCollectPost: Array
+  userCollectPostList: Array
 })
 
-const emit = defineEmits(['updateList'])
-
-const onWaterFail = () => {
+function onWaterFail() {
   if (!lisRef.value?.length || !ulRef.value) {
     return
   }
@@ -42,33 +48,41 @@ const onWaterFail = () => {
   })
 }
 
-const toggleEvent = async (value) => {
+async function toggleState(value) {
   isChosen.value = value
-  nextTick(() => {
-    onWaterFail()
-  })
-  emit('updateList')
-}
-
-const onUpdateListInfo = async () => {
-  await userStore.getUserPostList()
-  await userStore.getUserCollectPost()
-}
-
-const onUpdateList = async () => {
-  await userStore.getUserPostList()
-  await userStore.getUserCollectPost()
-  emit('updateList')
-  setTimeout(() => {
-    onWaterFail()
-  }, 100)
-}
-
-nextTick(() => {
+  await nextTick()
   onWaterFail()
-})
+}
 
-const handleResize = () => {
+watch(
+  () => [
+    postStore.userPostListStateMap[userStore.userId]?.page,
+    postStore.userCollectPostListStateMap[userStore.userId]?.page
+  ],
+  async () => {
+    await nextTick()
+    onWaterFail()
+  }
+)
+
+watch(
+  () => [
+    postStore.userPostListStateMap[route.params.id]?.page,
+    postStore.userCollectPostListStateMap[route.params.id]?.page
+  ],
+  async () => {
+    if (!route.fullPath.startsWith('/follow')) return
+    await nextTick()
+    onWaterFail()
+  }
+)
+
+const onUpdateListAfterDel = async () => {
+  await nextTick()
+  onWaterFail()
+}
+
+function handleResize() {
   let timer = null
   return function () {
     if (timer) clearTimeout(timer)
@@ -81,15 +95,15 @@ const handleResize = () => {
 const callFn = handleResize()
 window.addEventListener('resize', callFn)
 
-onActivated(() => {
-  setTimeout(() => {
-    onWaterFail()
-  }, 100)
+onMounted(async () => {
+  await nextTick()
+  onWaterFail()
 })
 
-setTimeout(() => {
+onActivated(async () => {
+  await nextTick()
   onWaterFail()
-}, 100)
+})
 
 const currentUserId = () => {
   if (route.fullPath.startsWith('/user')) {
@@ -104,20 +118,26 @@ const currentUserId = () => {
 
 const getUserFollowList = async () => {
   const res = await userFollowListService(currentUserId())
+  if (!res) return
   userFollowList.value = res.data.data
 }
 getUserFollowList()
 
 const getUserFansList = async () => {
   const res = await userFansListService(currentUserId())
+  if (!res) return
   userFansList.value = res.data.data
 }
 getUserFansList()
 
-const toFollowDetail = (id) => {
+function navigateToFollowDetail(id) {
   sessionStorage.setItem(`/follow/${id}`, 0)
   router.push(`/follow/${id}?redirect=${route.fullPath}`)
 }
+
+defineExpose({
+  onWaterFail
+})
 </script>
 
 <template>
@@ -138,9 +158,12 @@ const toFollowDetail = (id) => {
         alt=""
       />
       <follow-button
-        :isFollow="props.userInfo?.is_followed_by_current_user"
+        :isFollow="userStore.userFollowList.includes(props.userInfo?.user_id)"
         :followId="props.userInfo?.user_id"
-        v-if="props.userInfo?.user_id !== userStore.userId"
+        v-if="
+          props.userInfo?.user_id !== userStore.userId &&
+          userStore.userFollowList.length
+        "
         class="btn"
       ></follow-button>
       <button
@@ -162,7 +185,7 @@ const toFollowDetail = (id) => {
               <li
                 v-for="(item, index) in userFollowList"
                 :key="index"
-                @click="toFollowDetail(item.follow_id)"
+                @click="navigateToFollowDetail(item.follow_id)"
               >
                 <img :src="baseURL + item.user_avatar" />
                 <span>{{ item.username }}</span>
@@ -178,7 +201,7 @@ const toFollowDetail = (id) => {
               <li
                 v-for="(item, index) in userFansList"
                 :key="index"
-                @click="toFollowDetail(item.user_id)"
+                @click="navigateToFollowDetail(item.user_id)"
               >
                 <img :src="baseURL + item.user_avatar" />
                 <span>{{ item.username }}</span>
@@ -189,7 +212,7 @@ const toFollowDetail = (id) => {
       </div>
     </div>
     <div class="footer">
-      <toggle-button @event="toggleEvent">
+      <toggle-button @event="toggleState">
         <template #first>
           <span v-if="props.userInfo?.user_id === userStore.userId"
             >我的帖子</span
@@ -204,14 +227,14 @@ const toFollowDetail = (id) => {
         </template>
       </toggle-button>
       <ul ref="ul" v-if="isChosen">
-        <li ref="lis" v-for="post in userPostList" :key="post.p_id">
+        <li ref="lis" v-for="post in props.userPostList" :key="post.p_id">
           <post-card
-            @update-list-info="onUpdateListInfo"
-            @update-list-status="onUpdateList"
+            @update-list-after-del="onUpdateListAfterDel"
             :post
+            :userCollectPidList="userStore.userCollectPidList"
           ></post-card>
         </li>
-        <span class="tip" v-if="!userPostList.length"
+        <span class="tip" v-if="!props.userPostList.length"
           ><slot name="pText">没有帖子，去</slot
           ><strong v-if="$slots.pEvent" @click="router.push('/publish')"
             ><slot name="pEvent">新建一个</slot></strong
@@ -219,15 +242,19 @@ const toFollowDetail = (id) => {
         >
       </ul>
       <ul ref="ul" v-else>
-        <li ref="lis" v-for="post in userCollectPost" :key="post?.p_id">
+        <li
+          ref="lis"
+          v-for="post in props.userCollectPostList"
+          :key="post?.p_id"
+        >
           <post-card
-            @update-list-info="onUpdateListInfo"
-            @update-list-status="onUpdateList"
+            @update-list-after-del="onUpdateListAfterDel"
             :post
+            :userCollectPidList="userStore.userCollectPidList"
           >
           </post-card>
         </li>
-        <span class="tip" v-if="!userCollectPost.length"
+        <span class="tip" v-if="!props.userCollectPostList.length"
           ><slot name="cText">没有收藏帖子，去</slot
           ><strong v-if="$slots.cEvent" @click="router.push('/post')"
             ><slot name="cEvent">收藏一个</slot></strong
@@ -354,6 +381,10 @@ $position-size: 200px;
               width: 32px;
               height: 32px;
               border-radius: 50%;
+            }
+
+            span {
+              font-size: 14px;
             }
           }
         }

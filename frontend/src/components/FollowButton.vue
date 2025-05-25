@@ -1,41 +1,38 @@
 <script setup>
 import { followAddService, followDelService } from '@/api/follow'
-import { ref, watch, inject } from 'vue'
-import { useUserStore, usePostStore, useFollowStore } from '@/stores'
+import { ref, watch } from 'vue'
+import { useUserStore } from '@/stores'
 import showPrompt from '@/utils/promptBox'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
-const postStore = usePostStore()
 const userStore = useUserStore()
-const followStore = useFollowStore()
 
 const active = ref(false)
 
 const props = defineProps({
-  isFollow: String,
+  isFollow: Boolean,
   followId: String
 })
 
 watch(
   () => props.isFollow,
-  () => getFollowList()
+  () => setActive()
 )
 
-const getFollowList = async () => {
-  if (props.isFollow === 'true') {
+const setActive = async () => {
+  if (props.isFollow) {
     active.value = true
   } else {
     active.value = false
   }
 }
-getFollowList()
-
-const { updateFollowList } = inject('updateCollectInfo', {})
+setActive()
 
 let flag = true
 const onFollow = async () => {
-  if (flag && !userStore.userId) {
+  if (!flag) return
+  if (!userStore.userId) {
     flag = false
     showPrompt('未登录，是否跳转到', 'error', {
       time: 5000,
@@ -47,47 +44,20 @@ const onFollow = async () => {
     }, 4900)
     return
   }
-  if (flag) {
-    const path = route.path
-    const parts = path.split('/')
-    const followId = parts[2]
-    if (active.value === false) {
-      await followAddService({
-        userId: userStore.userId,
-        followId: props.followId
-      })
-      await postStore.getPostList()
-      showPrompt('关注成功', 'success')
-    } else {
-      await followDelService({
-        userId: userStore.userId,
-        followId: props.followId
-      })
-      await postStore.getPostList()
-      showPrompt('取消关注成功', 'success')
-    }
-    if (route.path.startsWith('/post/')) {
-      await userStore.getUserInfo()
-      await postStore.getPostDetail(followId)
-      await userStore.getUserCollectPost()
-    }
-    if (route.path.startsWith('/user')) {
-      await userStore.getUserCollectPost()
-      await userStore.getUserInfo()
-      updateFollowList()
-    }
-    if (route.path.startsWith('/follow/')) {
-      await userStore.getUserCollectPost()
-      await followStore.getFollowInfo(followId)
-      await followStore.getFollowPostList(followId)
-      await followStore.getFollowCollectPost(followId)
-      updateFollowList()
-    }
-    if (route.path === '/post') {
-      await userStore.getUserInfo()
-      await userStore.getUserCollectPost()
-    }
+  if (active.value === false) {
+    await followAddService({
+      userId: userStore.userId,
+      followId: props.followId
+    })
+    showPrompt('关注成功', 'success')
+  } else {
+    await followDelService({
+      userId: userStore.userId,
+      followId: props.followId
+    })
+    showPrompt('取消关注成功', 'success')
   }
+  await userStore.getUserFollowList()
 }
 </script>
 
@@ -105,8 +75,6 @@ button {
   outline: none;
   width: 100%;
   height: 100%;
-  // width: 80px;
-  // height: 30px;
   border-radius: calc($main-gap / 2);
   transition: all 0.3s ease;
   background-color: var(--postcard-btn-color);

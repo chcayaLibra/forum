@@ -6,7 +6,7 @@ import showPrompt from '@/utils/promptBox'
 import { useRoute } from 'vue-router'
 import { escapeHTML } from '@/utils/safeContent'
 
-const textarea = ref()
+const textarea = ref('')
 const userStore = useUserStore()
 const route = useRoute()
 
@@ -22,12 +22,12 @@ const comment = ref({
 
 const emit = defineEmits(['updateCommentList'])
 
-let flag = ref(true)
-const sendComment = async (e) => {
-  if (!textarea.value) {
-    return
-  }
-  if (flag.value && !userStore.userId) {
+const flag = ref(true)
+async function sendComment(e) {
+  if (e.key === 'Enter' && e.shiftKey) return
+  if (!textarea.value || !flag.value) return
+
+  if (!userStore.userId) {
     flag.value = false
     showPrompt('未登录，是否跳转到', 'error', {
       time: 5000,
@@ -39,12 +39,10 @@ const sendComment = async (e) => {
     }, 5100)
     return
   }
-  if (e.key === 'Enter' && e.shiftKey) return
-  if (flag.value) {
-    await postCommentService(comment.value)
-    textarea.value = ''
-    emit('updateCommentList')
-  }
+
+  await postCommentService(comment.value)
+  textarea.value = ''
+  emit('updateCommentList')
 }
 </script>
 

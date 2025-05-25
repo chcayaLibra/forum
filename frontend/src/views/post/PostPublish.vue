@@ -2,7 +2,7 @@
 import showPrompt from '@/utils/promptBox'
 import { uploadImgs } from '@/utils/uploadImgs'
 import { ref, useTemplateRef } from 'vue'
-import { useUserStore } from '@/stores'
+import { usePostStore, useUserStore } from '@/stores'
 import { postPublishService } from '@/api/post'
 import ToggleButton from '@/components/ToggleButton.vue'
 import router from '@/router'
@@ -11,6 +11,7 @@ import { escapeHTML } from '@/utils/safeContent'
 const context = ref('')
 const imageCountRef = useTemplateRef('imageCount')
 const userStore = useUserStore()
+const postStore = usePostStore()
 const flag = ref(true)
 const isPublic = ref(true)
 
@@ -18,7 +19,7 @@ const toggleEvent = (value) => {
   isPublic.value = value
 }
 
-const publish = async () => {
+async function publish() {
   if (!flag.value) return
   flag.value = false
   if (!context.value) {
@@ -40,6 +41,7 @@ const publish = async () => {
   }
 
   const res = await postPublishService(formData)
+  if (!res) return
 
   if (res.data.code === 0) {
     showPrompt(res.data.message, 'success')
@@ -50,12 +52,12 @@ const publish = async () => {
           event: 'updateUserList'
         }
       })
-      await userStore.getUserPostList()
+      await postStore.getUserPostList(userStore.userId)
       flag.value = true
     }, 1000)
   } else {
-    flag.value = true
     showPrompt('发布失败', 'error')
+    flag.value = true
   }
 }
 </script>

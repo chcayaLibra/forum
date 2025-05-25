@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken')
 const bcrypt = require('bcryptjs')
 const path = require('path')
 const http = require('http')
+// const https = require('https')
 const { Server } = require('socket.io')
 const fs = require('fs')
 
@@ -12,17 +13,6 @@ const multer = require('multer')
 
 const app = express()
 
-// const options = {
-//   key: fs.readFileSync('pem/key.pem'),
-//   cert: fs.readFileSync('pem/cert.pem')
-// }
-
-// app.use(
-//   cors({
-//     origin: '自己的域名',
-//     credentials: true
-//   })
-// )
 app.use(cors())
 
 app.get('/', (req, res) => {
@@ -30,9 +20,9 @@ app.get('/', (req, res) => {
 })
 
 const server = http.createServer(app)
+
 const io = new Server(server, {
   cors: {
-    // origin: '自己的域名',
     origin: '*',
     methods: ['GET', 'POST'],
     credentials: true
@@ -67,8 +57,20 @@ db.connect((err) => {
 })
 
 // 帖子接口
-app.get('/post', (req, res) => {
+function dbQueryPromise(sql, value) {
+  return new Promise((resolve, reject) => {
+    db.query(sql, value, (err, result) => {
+      if (err) return reject(arr)
+      resolve(result)
+    })
+  })
+}
+app.get('/post', async (req, res) => {
   const userId = req.query.user_id || null
+  const page = parseInt(req.query.page) || 1
+  const limit = parseInt(req.query.limit) || 10
+  const offset = (page - 1) * limit
+
   const sql = `SELECT
     p.p_id,
     p.user_id,
@@ -79,68 +81,48 @@ app.get('/post', (req, res) => {
     p_content,
     p_images,
     u.user_avatar,
-    u.username,
-    CASE
-        WHEN ? IS NOT NULL AND EXISTS (SELECT 1 FROM collection c WHERE c.p_id = p.p_id AND c.user_id = ?)
-        THEN 'true'
-        ELSE 'false'
-    END AS is_collect,
-    CASE
-        WHEN c.p_id IS NOT NULL THEN 'true'
-        ELSE 'false'
-    END AS is_current_user_collect,
-    CASE
-        WHEN ? IS NOT NULL AND EXISTS (SELECT 1 FROM follows f WHERE f.follow_id = p.user_id AND f.user_id = ?)
-        THEN 'true'
-        ELSE 'false'
-    END AS is_followed_by_current_user
-FROM
+    u.username
+  FROM
     post p
-LEFT JOIN
+  LEFT JOIN
     users u ON p.user_id = u.user_id
-LEFT JOIN
+  LEFT JOIN
     collection c ON p.p_id = c.p_id AND c.user_id = ?
-WHERE
+  WHERE
     p.is_public = 'true'
-ORDER BY
-    p.publish_time DESC;`
+  ORDER BY
+    p.publish_time DESC
+  LIMIT ? OFFSET ?`
+  const countSql = `select count(*) as total from post where is_public = 'true'`
 
-  db.query(sql, [userId, userId, userId, userId, userId], (err, result) => {
-    if (err) {
-      console.error('查询错误: ', err)
-      return res.status(500).json({
-        code: 1,
-        message: '查询错误',
-        error: err.message
-      })
-    }
+  try {
+    const [list, count] = await Promise.all([
+      dbQueryPromise(sql, [userId, limit, offset]),
+      dbQueryPromise(countSql)
+    ])
 
     res.json({
       code: 0,
       message: '请求成功',
-      data: result
+      data: list,
+      total: count[0].total
     })
-  })
+  } catch (err) {
+    console.error('查询错误', err)
+    res.status(500).json({
+      code: 1,
+      message: '查询错误',
+      error: err.message
+    })
+  }
 })
 
 // 帖子详情接口
 app.post('/post/detail', (req, res) => {
   const { p_id, user_id } = req.body
-  const sql = `select p.p_id, p.user_id, p_view_count, p_collect_count, p_share_count, p_comment_count, p_content, p_images, user_avatar, username, is_public,
-            CASE WHEN ? IS NOT NULL AND EXISTS (SELECT 1 FROM collection c WHERE c.p_id = p.p_id AND c.user_id = ?) 
-            THEN 'true' ELSE 'false' END AS is_collect,
-        CASE 
-        WHEN c.p_id IS NOT NULL THEN 'true'
-        ELSE 'false'
-    END AS is_current_user_collect,
-    CASE
-        WHEN ? IS NOT NULL AND EXISTS (SELECT 1 FROM follows f WHERE f.follow_id = p.user_id AND f.user_id = ?)
-        THEN 'true'
-        ELSE 'false'
-    END AS is_followed_by_current_user
-FROM post p left join users u on p.user_id = u.user_id LEFT JOIN 
+  const sql = `select p.p_id, p.user_id, p_view_count, p_collect_count, p_share_count, p_comment_count, p_content, p_images, user_avatar, username, is_public FROM post p left join users u on p.user_id = u.user_id LEFT JOIN 
     collection c ON p.p_id = c.p_id AND c.user_id = ? where p.p_id = ?`
-  db.query(sql, [user_id, user_id, user_id, user_id, user_id, p_id], (err, result) => {
+  db.query(sql, [user_id, p_id], (err, result) => {
     if (err) {
       console.error('数据库查询错误:', err) // 记录错误日志
       return res.status(500).json({
@@ -353,16 +335,10 @@ app.post('/register', async (req, res) => {
 
 // 用户信息接口
 app.post('/users/info', (req, res) => {
-  const { userId, followId } = req.body
-  const sql = `select u.user_id, username, user_avatar, user_email, registration_time, follows, fans, background_img, sex, signature,
-        CASE
-        WHEN ? IS NOT NULL AND EXISTS (SELECT 1 FROM follows f WHERE f.follow_id = u.user_id AND f.user_id = ?)
-        THEN 'true'
-        ELSE 'false'
-    END AS is_followed_by_current_user
-     from users u where u.user_id = ?`
+  const { followId } = req.body
+  const sql = `select u.user_id, username, user_avatar, user_email, registration_time, follows, fans, background_img, sex, signature from users u where u.user_id = ?`
 
-  db.query(sql, [userId, userId, followId], (err, result) => {
+  db.query(sql, [followId], (err, result) => {
     if (err) {
       console.error('数据库查询错误:', err) // 记录错误日志
       return res.status(500).json({
@@ -389,39 +365,38 @@ app.post('/users/info', (req, res) => {
 })
 
 // 查询用户帖子接口
-app.post('/users/posts', (req, res) => {
+app.post('/users/posts', async (req, res) => {
   const { userId, followId } = req.body
-  const sql = `select p.p_id, p.user_id, p_view_count, p_collect_count, p_share_count, p_comment_count, p_content, p_images, user_avatar, username, is_public,
-           CASE WHEN ? IS NOT NULL AND EXISTS (SELECT 1 FROM collection c WHERE c.p_id = p.p_id AND c.user_id = ?) 
-            THEN 'true' ELSE 'false' END AS is_collect,
-        CASE 
-        WHEN c.p_id IS NOT NULL THEN 'true'
-        ELSE 'false'
-    END AS is_current_user_collect,
-        CASE
-        WHEN ? IS NOT NULL AND EXISTS (SELECT 1 FROM follows f WHERE f.follow_id = p.user_id AND f.user_id = ?)
-        THEN 'true'
-        ELSE 'false'
-    END AS is_followed_by_current_user
-FROM post p left join users u on p.user_id =u.user_id LEFT JOIN 
-    collection c ON p.p_id = c.p_id AND c.user_id = ? where p.user_id = ? order by publish_time desc`
+  const page = parseInt(req.body.page) || 1
+  const limit = parseInt(req.body.limit) || 10
+  const offset = (page - 1) * limit
 
-  db.query(sql, [userId, userId, userId, userId, userId, followId], (err, result) => {
-    if (err) {
-      console.error('查询错误: ', err)
-      return res.status(500).json({
-        code: 1,
-        message: '查询错误',
-        error: err.message
-      })
-    }
+  const sql = `select p.p_id, p.user_id, p_view_count, p_collect_count, p_share_count, p_comment_count, p_content, p_images, user_avatar, username, is_public FROM post p left join users u on p.user_id =u.user_id LEFT JOIN 
+    collection c ON p.p_id = c.p_id AND c.user_id = ? where p.user_id = ? order by publish_time desc LIMIT ? OFFSET ?`
+
+  const countSql = `select count(*) as total FROM post p left join users u on p.user_id =u.user_id LEFT JOIN 
+    collection c ON p.p_id = c.p_id AND c.user_id = ? where p.user_id = ?`
+
+  try {
+    const [list, count] = await Promise.all([
+      dbQueryPromise(sql, [userId, followId, limit, offset]),
+      dbQueryPromise(countSql, [userId, followId])
+    ])
 
     res.json({
       code: 0,
       message: '请求成功',
-      data: result
+      data: list,
+      total: count[0].total
     })
-  })
+  } catch (err) {
+    console.error('查询错误', err)
+    res.status(500).json({
+      code: 1,
+      message: '查询错误',
+      error: err.message
+    })
+  }
 })
 
 // 用户信息更新
@@ -512,9 +487,13 @@ app.post('/publish', upload.array('p_images', 9), (req, res) => {
   })
 })
 
-// 用户收藏帖子接口
-app.post('/user/collect/', (req, res) => {
+// 用户收藏帖子信息接口
+app.post('/user/collect', async (req, res) => {
   const { userId, followId } = req.body
+  const page = parseInt(req.body.page) || 1
+  const limit = parseInt(req.body.limit) || 10
+  const offset = (page - 1) * limit
+
   const sql = `SELECT 
     p.p_id, 
     p.user_id, 
@@ -526,17 +505,7 @@ app.post('/user/collect/', (req, res) => {
     p.p_images, 
     u.user_avatar, 
     u.username, 
-    p.is_public, 
-    'true' AS is_collect,
-    CASE 
-        WHEN c2.p_id IS NOT NULL THEN 'true'
-        ELSE 'false'
-    END AS is_current_user_collect,
-    CASE
-        WHEN ? IS NOT NULL AND EXISTS (SELECT 1 FROM follows f WHERE f.follow_id = p.user_id AND f.user_id = ?)
-        THEN 'true'
-        ELSE 'false'
-    END AS is_followed_by_current_user
+    p.is_public
 FROM 
     collection c 
 LEFT JOIN 
@@ -546,12 +515,62 @@ LEFT JOIN
 LEFT JOIN 
     collection c2 ON c2.p_id = c.p_id AND c2.user_id = ?
 WHERE 
-    p.is_public = 'true' 
-    AND c.user_id = ?
+    c.user_id = ?
+    AND (
+        p.is_public = 'true'
+        OR p.user_id = ?
+    )
 ORDER BY 
-    c.collect_time DESC;`
+    c.collect_time DESC
+     LIMIT ? OFFSET ?`
 
-  db.query(sql, [userId, userId, userId, followId], (err, result) => {
+  const countSql = `select count(*) as total FROM 
+    collection c 
+LEFT JOIN 
+    post p ON c.p_id = p.p_id 
+LEFT JOIN 
+    users u ON p.user_id = u.user_id 
+LEFT JOIN 
+    collection c2 ON c2.p_id = c.p_id AND c2.user_id = ?
+WHERE 
+    c.user_id = ?
+    AND (
+        p.is_public = 'true'
+        OR p.user_id = ?
+    );`
+
+  try {
+    const [list, count] = await Promise.all([
+      dbQueryPromise(sql, [userId, followId, userId, limit, offset]),
+      dbQueryPromise(countSql, [userId, followId, userId])
+    ])
+
+    res.json({
+      code: 0,
+      message: '请求成功',
+      data: list,
+      total: count[0].total
+    })
+  } catch (err) {
+    console.error('查询错误', err)
+    res.status(500).json({
+      code: 1,
+      message: '查询错误',
+      error: err.message
+    })
+  }
+})
+
+// 用户收藏帖子p_id接口
+app.post('/user/collect/id', (req, res) => {
+  const { userId, currentUserId } = req.body
+  const sql = `SELECT c.p_id
+FROM collection c
+JOIN post p ON c.p_id = p.p_id
+WHERE c.user_id = ?
+  AND (p.is_public = 'true' OR p.user_id = ?);`
+
+  db.query(sql, [userId, currentUserId], (err, result) => {
     if (err) {
       console.error('查询错误: ', err)
       return res.status(500).json({
@@ -623,18 +642,11 @@ app.delete('/post/collect/del', (req, res) => {
 // 搜索接口
 app.post('/post/search', (req, res) => {
   const { userId, searchContent } = req.body
-  const sql = `SELECT p.p_id, p.user_id, p_view_count, p_collect_count, p_share_count, p_comment_count, p_content, p_images, user_avatar, username,
-       CASE WHEN ? IS NOT NULL AND EXISTS (SELECT 1 FROM collection c WHERE c.p_id = p.p_id AND c.user_id = ?) 
-            THEN 'true' ELSE 'false' END AS is_collect,
-        CASE 
-        WHEN c.p_id IS NOT NULL THEN 'true'
-        ELSE 'false'
-    END AS is_current_user_collect
-FROM post p left join users u on p.user_id = u.user_id LEFT JOIN 
+  const sql = `SELECT p.p_id, p.user_id, p_view_count, p_collect_count, p_share_count, p_comment_count, p_content, p_images, user_avatar, username FROM post p left join users u on p.user_id = u.user_id LEFT JOIN 
     collection c ON p.p_id = c.p_id AND c.user_id = ? where is_public = 'true' and p_content LIKE ? order by publish_time desc;`
   const formatSearchContent = `%${searchContent}%`
 
-  db.query(sql, [userId, userId, userId, formatSearchContent], (err, result) => {
+  db.query(sql, [userId, formatSearchContent], (err, result) => {
     if (err) {
       console.error('查询错误: ', err)
       return res.status(500).json({
@@ -1017,6 +1029,6 @@ app.get('/api/data', verifyToken, (req, res) => {
   res.json({ message: '这是受保护数据', user: req.user })
 })
 
-server.listen(3000, () => {
-  console.log(`服务器运行在 http://localhost:3000`)
+server.listen(2053, () => {
+  console.log(`服务器运行在 http://localhost:2053`)
 })

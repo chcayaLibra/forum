@@ -10,7 +10,6 @@ const route = useRoute()
 const props = defineProps({
   item: Object
 })
-// console.log(props.item)
 </script>
 
 <template>
@@ -33,7 +32,6 @@ const props = defineProps({
       </div>
     </div>
     <div class="main">
-      <!-- <div>{{ props.item?.c_content }}</div> -->
       <div v-html="lineBreakReplace(props.item?.c_content)"></div>
     </div>
   </div>

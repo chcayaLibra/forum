@@ -8,5 +8,5 @@ export default pinia
 
 export * from './modules/post'
 export * from './modules/user'
-export * from './modules/theme'
+export * from './modules/switch'
 export * from './modules/follow'

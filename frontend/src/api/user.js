@@ -7,7 +7,7 @@ export const userPostListService = (data) => request.post(`/users/posts`, data)
 export const updateUserInfoService = (data) => request.post('/update', data)
 
 export const userCollectPostService = (data) =>
-  request.post(`/user/collect/`, data)
+  request.post(`/user/collect`, data)
 
 export const userPostDelService = (data) =>
   request.delete('/user/post/del', { data })
@@ -23,3 +23,6 @@ export const userFollowListService = (user_id) =>
 
 export const userFansListService = (user_id) =>
   request.get(`/user/fans?userId=${user_id}`)
+
+export const userCollectPidListService = (data) =>
+  request.post('/user/collect/id', data)

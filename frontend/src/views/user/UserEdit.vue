@@ -16,7 +16,7 @@ const bgFileRef = useTemplateRef('bgFile')
 const userStore = useUserStore()
 const flag = ref(true)
 
-const updateFormInfo = async () => {
+async function updateFormInfo() {
   if (!flag.value) return
   flag.value = false
   const formData = new FormData()
@@ -31,6 +31,7 @@ const updateFormInfo = async () => {
     formData.append('bgImg', bgFileRef.value.files[0])
   }
   const res = await updateUserInfoService(formData)
+  if (!res) return
   if (res.data.code === 0) {
     showPrompt(res.data.msg, 'success')
     setTimeout(() => {
@@ -43,8 +44,8 @@ const updateFormInfo = async () => {
       flag.value = true
     }, 1000)
   } else {
-    flag.value = true
     showPrompt(res.data.msg, 'error')
+    flag.value = true
   }
 }
 

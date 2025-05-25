@@ -1,4 +1,4 @@
-export const escapeHTML = (str) => {
+export function escapeHTML(str) {
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

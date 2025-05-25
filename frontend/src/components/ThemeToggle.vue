@@ -1,8 +1,8 @@
 <script setup>
 import { ref, watchEffect, nextTick } from 'vue'
-import { useThemeStore } from '@/stores'
+import { useSwitchStore } from '@/stores'
 
-const themeStore = useThemeStore()
+const switchStore = useSwitchStore()
 
 const match = window.matchMedia('(prefers-color-scheme: dark)')
 const isDarkMode = () => {
@@ -31,19 +31,19 @@ const setThemeDefault = () => {
   const btn = document.querySelectorAll('.theme-btn')
   const dataset = document.body.dataset
 
-  if (themeStore.theme) {
-    dataset.theme = themeStore.theme
+  if (switchStore.theme) {
+    dataset.theme = switchStore.theme
     toggleBtn(btn, dataset.theme)
     return
   }
 
   if (isDarkMode()) {
     dataset.theme = 'dark'
-    themeStore.setTheme('dark')
+    switchStore.setTheme('dark')
     toggleBtn(btn, dataset.theme)
   } else {
     dataset.theme = 'light'
-    themeStore.setTheme('light')
+    switchStore.setTheme('light')
     toggleBtn(btn, dataset.theme)
   }
 }
@@ -63,11 +63,11 @@ const themeToggle = () => {
   const dataset = document.body.dataset
   if (dataset.theme === 'light') {
     dataset.theme = 'dark'
-    themeStore.setTheme('dark')
+    switchStore.setTheme('dark')
     toggleBtn(btn, dataset.theme)
   } else {
     dataset.theme = 'light'
-    themeStore.setTheme('light')
+    switchStore.setTheme('light')
     toggleBtn(btn, dataset.theme)
   }
 }

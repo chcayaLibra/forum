@@ -9,7 +9,7 @@ import {
   postUpdateViewService
 } from '@/api/post'
 import { lineBreakReplace } from '@/utils/regular'
-import { useUserStore, usePostStore, useFollowStore } from '@/stores'
+import { useUserStore, usePostStore } from '@/stores'
 import { baseURL } from '@/utils/request'
 import showPrompt from '@/utils/promptBox'
 import { useRoute } from 'vue-router'
@@ -23,7 +23,6 @@ import FollowButton from '@/components/FollowButton.vue'
 const route = useRoute()
 const userStore = useUserStore()
 const postStore = usePostStore()
-const followStore = useFollowStore()
 
 const images = ref()
 
@@ -31,6 +30,7 @@ const viewCount = ref(0)
 const collectCount = ref(0)
 const isShowFollowBtn = ref(false)
 const isCollect = ref('')
+const isPublic = ref(true)
 
 const color = {
   focus: '#ffea00',
@@ -39,35 +39,40 @@ const color = {
 const collectedColor = ref(color.blur)
 
 const props = defineProps({
-  post: Object
+  post: Object,
+  userCollectPidList: Array
 })
 
-const initCollect = () => {
-  if (
-    props.post.is_collect === 'true' &&
-    props.post.is_current_user_collect === 'true'
-  ) {
+const setPublicState = () => {
+  if (props.post.is_public === 'false') {
+    isPublic.value = false
+  } else {
+    isPublic.value = true
+  }
+}
+setPublicState()
+
+const setCollectState = () => {
+  if (props.userCollectPidList.includes(props.post.p_id)) {
     collectedColor.value = color.focus
   } else {
     collectedColor.value = color.blur
   }
 }
-initCollect()
-
+viewCount.value = props.post.p_view_count
 images.value = JSON.parse(props.post.p_images)
 
 watchEffect(() => {
-  initCollect()
+  setCollectState()
   collectCount.value = props.post.p_collect_count
-  isCollect.value = props.post.is_current_user_collect
-  viewCount.value = props.post.p_view_count
+  isCollect.value = props.userCollectPidList.includes(props.post.p_id)
 })
 
 let flag = true
-const emit = defineEmits(['updateListInfo', 'updateListStatus'])
-const onCollect = async () => {
-  if (flag && !userStore.userId) {
-    flag = false
+async function onCollect() {
+  if (!flag) return
+  flag = false
+  if (!userStore.userId) {
     showPrompt('未登录，是否跳转到', 'error', {
       time: 5000,
       pushPath: `/login?redirect=${route.fullPath}`,
@@ -78,46 +83,36 @@ const onCollect = async () => {
     }, 4900)
     return
   }
-  if (flag && isCollect.value === 'true') {
-    isCollect.value = 'false'
-    flag = false
+  if (isCollect.value) {
+    isCollect.value = false
     await postCollectDelService({
       user_id: userStore.userId,
       p_id: props.post.p_id
     })
-    emit('updateListStatus')
+    await userStore.getUserCollectPidList()
     showPrompt('已取消收藏', 'success')
-    collectCount.value--
+    postStore.subCollectCount(props.post.p_id)
     collectedColor.value = color.blur
-    flag = true
-  } else if (flag && isCollect.value === 'false') {
-    isCollect.value = 'true'
-    flag = false
+  } else {
+    isCollect.value = true
     await postCollectAddService({
       user_id: userStore.userId,
       p_id: props.post.p_id
     })
+    await userStore.getUserCollectPidList()
     showPrompt('收藏成功', 'success')
-    collectCount.value++
+    postStore.addCollectCount(props.post.p_id)
     collectedColor.value = color.focus
-    flag = true
   }
-  if (!route.fullPath.includes('/post?search')) {
-    await postStore.getPostList()
-    await userStore.getUserPostList()
-    await userStore.getUserCollectPost()
-    await followStore.getFollowPostList(followStore.followInfo?.user_id)
-    await followStore.getFollowCollectPost(followStore.followInfo?.user_id)
-    emit('updateListInfo')
-  }
+  flag = true
 }
 
-const toPostDetail = async (e, id) => {
+async function navigateToPostDetail(e, id) {
   if (route.path.startsWith('/post/')) return
   if (e.target.tagName === 'IMG') return
+  await postUpdateViewService(id)
   await postStore.getPostDetail(id)
-  postUpdateViewService(id)
-  viewCount.value++
+  postStore.addPostViewCount(props.post.p_id)
   const url = route.fullPath
   const newUrl = url.replace(/\?event.*$/, '')
   router.push(`/post/${id}?redirect=${newUrl}`)
@@ -131,7 +126,8 @@ const isCurrentUser = () => {
 isCurrentUser()
 
 let delFlag = true
-const beforeDelPost = (p_id) => {
+const emit = defineEmits(['updateListAfterDel'])
+function beforeDelPost(p_id) {
   if (delFlag) {
     delFlag = false
     showPrompt('是否删除帖子', 'error', {
@@ -147,20 +143,26 @@ const beforeDelPost = (p_id) => {
     }, 5100)
   }
 }
-const afterDelPost = async (data) => {
+async function afterDelPost(data) {
   await userPostDelService(data)
-  emit('updateListStatus')
+  postStore.delPost(props.post.p_id)
   showPrompt('删除成功', 'success')
+  emit('updateListAfterDel')
+  userStore.getUserCollectPidList()
 }
 
 const back = () => {
   const url = router.currentRoute.value.query.redirect
-  const newUrl = url.replace(/\?event.*$/, '')
-  router.push(newUrl)
+  if (url) {
+    const newUrl = url.replace(/\?event.*$/, '')
+    router.push(newUrl)
+  } else {
+    router.push('/post')
+  }
 }
 
 let publicFlag = true
-const beforeOnPublic = (p_id) => {
+function beforeOnPublic(p_id) {
   if (publicFlag) {
     publicFlag = false
     showPrompt('是否转为公开', 'error', {
@@ -175,14 +177,15 @@ const beforeOnPublic = (p_id) => {
     }, 5100)
   }
 }
-const afterOnPublic = async ({ p_id }) => {
+async function afterOnPublic({ p_id }) {
   await userPostPublicService(p_id)
-  emit('updateListStatus')
   showPrompt('已设置为公开', 'success')
+  postStore.updatePublicState(p_id, 'true')
+  isPublic.value = true
 }
 
 let privateFlag = true
-const beforeOnPrivate = (p_id) => {
+function beforeOnPrivate(p_id) {
   if (privateFlag) {
     privateFlag = false
     showPrompt('是否转为非公开', 'error', {
@@ -197,13 +200,14 @@ const beforeOnPrivate = (p_id) => {
     }, 5100)
   }
 }
-const afterOnPrivate = async ({ p_id }) => {
+async function afterOnPrivate({ p_id }) {
   await userPostPrivateService(p_id)
-  emit('updateListStatus')
   showPrompt('已设置为非公开', 'success')
+  postStore.updatePublicState(p_id, 'false')
+  isPublic.value = false
 }
 
-const toFollowCard = async () => {
+function navigateToFollowCard() {
   if (route.path.startsWith(`/follow/${props.post?.user_id}`)) {
     return
   }
@@ -223,14 +227,14 @@ const toFollowCard = async () => {
         @click="fullScreen(props.post?.user_avatar)"
         :src="baseURL + props.post?.user_avatar"
       />
-      <span @click="toFollowCard" class="username">{{
+      <span @click="navigateToFollowCard" class="username">{{
         props.post?.username
       }}</span>
       <follow-button
-        :isFollow="props.post?.is_followed_by_current_user"
+        :isFollow="userStore.userFollowList.includes(props.post?.user_id)"
         :followId="props.post?.user_id"
         class="follow"
-        v-if="isShowFollowBtn"
+        v-if="isShowFollowBtn && userStore.userFollowList.length"
       ></follow-button>
       <div
         v-if="
@@ -258,7 +262,7 @@ const toFollowCard = async () => {
         </div>
         <div
           @click="beforeOnPublic(props.post?.p_id)"
-          v-if="props.post?.is_public === 'false'"
+          v-if="!isPublic"
           class="icon"
           title="未公开"
         >
@@ -285,7 +289,7 @@ const toFollowCard = async () => {
         </div>
         <div
           @click="beforeOnPrivate(props.post?.p_id)"
-          v-if="props.post?.is_public === 'true'"
+          v-if="isPublic"
           class="icon"
           title="公开"
         >
@@ -312,7 +316,7 @@ const toFollowCard = async () => {
       class="main"
       @click="
         (e) => {
-          toPostDetail(e, props.post?.p_id)
+          navigateToPostDetail(e, props.post?.p_id)
         }
       "
     >
@@ -352,7 +356,7 @@ const toFollowCard = async () => {
             p-id="11849"
           ></path>
         </svg>
-        <span>{{ viewCount }}</span>
+        <span>{{ props.post.p_view_count }}</span>
       </div>
       <div @click="onCollect" class="collection icon hover" title="收藏">
         <svg

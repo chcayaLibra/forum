@@ -8,7 +8,7 @@
  *  container: HtmlElement
  * }
  */
-export const waterFall = (opt) => {
+export function waterFall(opt) {
   const defaultOption = {
     minGap: 10,
     cards: [],

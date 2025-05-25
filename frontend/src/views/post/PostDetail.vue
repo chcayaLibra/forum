@@ -5,10 +5,11 @@ import CommentInput from './components/CommentInput.vue'
 import { useRoute } from 'vue-router'
 import { onMounted, ref, watchEffect } from 'vue'
 import PostCard from './components/PostCard.vue'
-import { usePostStore } from '@/stores'
+import { usePostStore, useUserStore } from '@/stores'
 
 const route = useRoute()
 const postStore = usePostStore()
+const userStore = useUserStore()
 
 const postDetail = ref()
 const commentList = ref()
@@ -26,6 +27,7 @@ watchEffect(() => {
 
 const getCommentList = async () => {
   const res = await postCommentListService(id)
+  if (!res) return
   commentList.value = res.data.data
 }
 
@@ -38,21 +40,19 @@ const onUpdateCommentList = () => {
   getCommentList()
 }
 
-const onUpdateListInfo = async () => {
-  await postStore.getPostList()
-}
+userStore.getUserFollowList()
+userStore.getUserCollectPidList(userStore.userId)
 </script>
 
 <template>
   <div class="container">
     <div class="detail">
       <post-card
-        @update-list-info="onUpdateListInfo"
         v-if="postDetail"
         :post="postDetail"
+        :userCollectPidList="userStore.userCollectPidList"
       >
         <template #back>&lt;</template>
-        <!-- <template #follow>关注</template> -->
       </post-card>
     </div>
     <div v-if="postDetail" class="comments">

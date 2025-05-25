@@ -1,10 +1,11 @@
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import { useSwitchStore } from '@/stores'
+import { ref, watch, nextTick, onActivated } from 'vue'
 
 const isChosen = ref(true)
-
-const firstBtn = ref()
-const secondBtn = ref()
+const firstBtn = ref(null)
+const secondBtn = ref(null)
+const switchStore = useSwitchStore()
 
 const emit = defineEmits(['event'])
 
@@ -36,13 +37,25 @@ const toggle = () => {
   emit('event', isChosen.value)
 }
 
+switchStore.setUserPageToggle(true)
+
 watch(isChosen, () => {
   if (isChosen.value === true) {
     firstBtn.value.style.pointerEvents = 'none'
     secondBtn.value.style.pointerEvents = 'auto'
+    switchStore.setUserPageToggle(true)
   } else {
     firstBtn.value.style.pointerEvents = 'auto'
     secondBtn.value.style.pointerEvents = 'none'
+    switchStore.setUserPageToggle(false)
+  }
+})
+
+onActivated(() => {
+  if (isChosen.value === true) {
+    switchStore.setUserPageToggle(true)
+  } else {
+    switchStore.setUserPageToggle(false)
   }
 })
 </script>

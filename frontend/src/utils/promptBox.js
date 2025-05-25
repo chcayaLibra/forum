@@ -13,11 +13,11 @@ import PromptBox from '@/components/PromptBox.vue'
  eventParams 事件名所需参数（type: Object)
  pathName和pushPath捆绑，eventParams和eventName捆绑，time仅当设置了以上任意一种事件显示倒计时
  */
-const showPrompt = (
+function showPrompt(
   msg,
   type = 'normal',
   { time = 1500, pushPath, pathName, eventName, eventParams } = {}
-) => {
+) {
   const messageInstance = createApp(PromptBox)
   const container = document.createElement('div')
   document.body.appendChild(container)

@@ -7,7 +7,7 @@ let instance = null
 const container = document.createElement('div')
 
 /**
- * 
+ *
  * @param {String} userId 用户id
  * @param {String} avatar 用户头像
  * @param {String} username 用户名称
@@ -15,14 +15,7 @@ const container = document.createElement('div')
  * @param {String} eventName 触发的事件名
  * @param {String} sender 用于记录跳转chat页面的用户id
  */
-export const chatPrompt = (
-  userId,
-  avatar,
-  username,
-  msg,
-  eventName,
-  sender
-) => {
+export function chatPrompt(userId, avatar, username, msg, eventName, sender) {
   if (!app) {
     app = createApp(ChatPrompt)
     app.directive('loading', directives['loading'])

@@ -1,45 +1,47 @@
 <script setup>
-import { ref, onMounted, onActivated, watchEffect, provide } from 'vue'
+import { ref, onMounted } from 'vue'
 import UserCard from '../user/components/UserCard.vue'
-import { useFollowStore } from '@/stores'
+import { useFollowStore, usePostStore, useUserStore } from '@/stores'
 import { useRoute } from 'vue-router'
 import router from '@/router'
 
 const route = useRoute()
 const followStore = useFollowStore()
-const followInfo = ref()
-const followPostList = ref()
-const followCollectPost = ref()
-const flag = ref(false)
+const userStore = useUserStore()
+const postStore = usePostStore()
+const followInfo = ref({})
+const followPostList = ref([])
+const followCollectPostList = ref([])
 
 const getFollow = async () => {
   await followStore.getFollowInfo(route.params.id)
-  await followStore.getFollowPostList(route.params.id)
-  await followStore.getFollowCollectPost(route.params.id)
+  await postStore.getUserPostList(route.params.id)
+  await postStore.getUserCollectPostList(route.params.id)
 }
 
 onMounted(async () => {
   await getFollow()
+  updateFollowList()
 })
 
 const updateFollowList = () => {
   followInfo.value = followStore.followInfo
-  followPostList.value = followStore.followPostList
-  followCollectPost.value = followStore.followCollectPost
+  followPostList.value = postStore.userPostListStateMap[route.params.id].posts
+  followCollectPostList.value =
+    postStore.userCollectPostListStateMap[route.params.id].posts
 }
-
-provide('updateCollectInfo', { updateFollowList })
-
-onActivated(async () => {
-  await getFollow()
-  updateFollowList()
-})
 
 const back = async () => {
   const url = router.currentRoute.value.query.redirect
-  const newUrl = url.replace(/\?event.*$/, '')
-  router.push(newUrl)
+  if (url) {
+    const newUrl = url.replace(/\?event.*$/, '')
+    router.push(newUrl)
+  } else {
+    router.push('/post')
+  }
 }
+
+userStore.getUserFollowList()
 </script>
 
 <template>
@@ -48,7 +50,7 @@ const back = async () => {
       v-if="followInfo"
       :userInfo="followInfo"
       :userPostList="followPostList"
-      :userCollectPost="followCollectPost"
+      :userCollectPostList="followCollectPostList"
     >
       <template #btn>编辑个人资料</template>
       <template #pText>没有帖子</template>

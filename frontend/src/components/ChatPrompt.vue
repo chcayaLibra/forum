@@ -1,24 +1,22 @@
 <script setup>
-// import { removeContainer } from '@/utils/chatPrompt'
 import router from '@/router'
 import { removeContainer } from '@/utils/chatPrompt'
 import { lineBreakReplace } from '@/utils/regular'
 import { baseURL } from '@/utils/request'
-// import { escapeHTML } from '@/utils/safeContent'
 import { ref } from 'vue'
 
 const chat = ref(null)
 const xValue = ref()
 
-const _avatar = ref()
-const _username = ref()
+const _avatar = ref('')
+const _username = ref('')
 const _msg = ref('')
 const _eventName = ref('')
 const _sendMsg = ref('')
 const _sender = ref('')
 const _userId = ref('')
 
-const boxDisappear = () => {
+function boxDisappearAnimate() {
   xValue.value = getComputedStyle(chat.value).getPropertyValue('--x')
 
   chat.value.animate(
@@ -39,7 +37,7 @@ const boxDisappear = () => {
 }
 
 let fn
-const saveInfo = (userId, avatar, username, msg, eventName, sender) => {
+function saveInfo(userId, avatar, username, msg, eventName, sender) {
   _userId.value = userId
   _avatar.value = avatar
   _username.value = username
@@ -54,12 +52,12 @@ const sendMessage = (e) => {
   _sendMsg.value
   fn(e, _sendMsg.value, _sender.value)
   _sendMsg.value = ''
-  boxDisappear()
+  boxDisappearAnimate()
   removeContainer()
 }
 
 const close = () => {
-  boxDisappear()
+  boxDisappearAnimate()
   removeContainer()
 }
 
@@ -70,7 +68,7 @@ const jump = () => {
       id: _userId.value
     }
   })
-  boxDisappear()
+  boxDisappearAnimate()
   removeContainer()
 }
 
@@ -170,6 +168,8 @@ $main-gap: 20px;
   border-radius: calc($main-gap / 2);
   box-shadow: 0 0 5px var(--aside-shadow);
   width: 350px;
+  // min-width: 40px;
+  // height: 40px;
   white-space: nowrap;
   color: rgb(0, 0, 0);
   font-weight: 400;

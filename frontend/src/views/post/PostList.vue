@@ -1,13 +1,17 @@
 <script setup>
 import SearchItem from '@/components/SearchItem.vue'
 import PostCard from './components/PostCard.vue'
-import { ref, useTemplateRef, nextTick, onActivated, watchEffect } from 'vue'
+import LoadingBox from '@/components/LoadingBox.vue'
+import { ref, useTemplateRef, nextTick, onActivated, watch } from 'vue'
 import { waterFall } from '@/utils/waterFall'
-import { usePostStore } from '@/stores'
+import { usePostStore, useSwitchStore, useUserStore } from '@/stores'
 import router from '@/router'
 
 const postList = ref([])
+
 const postStore = usePostStore()
+const userStore = useUserStore()
+const switchStore = useSwitchStore()
 
 const ulRef = useTemplateRef('ul')
 const lisRef = useTemplateRef('lis')
@@ -16,17 +20,21 @@ const MIN_GAP = 20
 const getPostList = async () => {
   await postStore.getPostList()
   postList.value = postStore.postList
-  // nextTick(() => {
-  //   onWaterFail()
-  // })
+
   await nextTick()
-  if (lisRef.value?.length) {
-    onWaterFail()
-  }
+  onWaterFail()
 }
 getPostList()
 
-const onWaterFail = () => {
+watch(
+  () => postStore.postListPage,
+  async () => {
+    await nextTick()
+    onWaterFail()
+  }
+)
+
+function onWaterFail() {
   if (!lisRef.value?.length || !ulRef.value) {
     return
   }
@@ -38,7 +46,7 @@ const onWaterFail = () => {
   })
 }
 
-const handleResize = () => {
+function handleResize() {
   let timer = null
   return function () {
     if (timer) clearTimeout(timer)
@@ -51,28 +59,23 @@ const handleResize = () => {
 const callFn = handleResize()
 window.addEventListener('resize', callFn)
 
-onActivated(() => {
-  nextTick(() => {
-    onWaterFail()
-  })
-})
-
-watchEffect(() => {
-  postList.value = postStore.postList
+onActivated(async () => {
+  await nextTick()
+  onWaterFail()
 })
 
 const onSearch = () => {
   router.push('/post?search')
 }
 
-const onSearchResult = () => {
+const onSearchResult = async () => {
   postList.value = postStore.postList
+  await nextTick()
   onWaterFail()
 }
 
-setTimeout(() => {
-  onWaterFail()
-}, 100)
+userStore.getUserFollowList()
+userStore.getUserCollectPidList(userStore.userId)
 </script>
 
 <template>
@@ -81,12 +84,17 @@ setTimeout(() => {
   <div class="container">
     <ul v-if="postList.length" ref="ul">
       <li ref="lis" v-for="post in postList" :key="post.p_id">
-        <post-card :post></post-card>
+        <post-card
+          :post
+          :userCollectPidList="userStore.userCollectPidList"
+        ></post-card>
       </li>
     </ul>
     <ul style="font-size: 30px" v-else>
       <span>没有结果🖕</span>
     </ul>
+    <LoadingBox v-if="switchStore.loading"></LoadingBox>
+    <div class="tip" v-if="!switchStore.hasMore">没有更多了🖕</div>
   </div>
 </template>
 
@@ -122,6 +130,11 @@ $main-gap: 20px;
         opacity: 1;
       }
     }
+  }
+
+  .tip {
+    text-align: center;
+    margin-bottom: 20px;
   }
 }
 </style>

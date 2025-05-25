@@ -45,7 +45,7 @@ watch(
   }
 )
 
-const judgeInfo = () => {
+function judgeInfo() {
   if (!formInfo.value.email) {
     emailText.value = '邮箱不为空！'
     return false
@@ -69,7 +69,7 @@ const judgeInfo = () => {
   return true
 }
 
-const toggle = () => {
+const resetState = () => {
   formInfo.value.email = ''
   formInfo.value.password = ''
   formInfo.value.repeatPwd = ''
@@ -79,51 +79,50 @@ const toggle = () => {
   state.value = !state.value
 }
 
-const login = async () => {
+async function login() {
   if (!flag.value) return
   if (!judgeInfo()) return
+  flag.value = false
   const token = await userLoginService({
     input: formInfo.value.email,
     password: formInfo.value.password
   })
-  flag.value = false
   if (token) {
     userStore.token = token.data.token
     userStore.setUserId(token.data.userId)
     showPrompt('登录成功', 'success')
     setTimeout(() => {
       router.push(router.currentRoute.value.query.redirect || '/')
+      flag.value = true
     }, 1500)
   } else {
+    showPrompt('登录失败', 'error')
     flag.value = true
   }
 }
 
-const register = async () => {
+async function register() {
   if (!flag.value) return
   if (!judgeInfo()) return
+  flag.value = false
   const res = await userRegisterService({
     email: formInfo.value.email,
     password: formInfo.value.password
   })
-  flag.value = false
   if (res) {
     showPrompt('注册成功，请前往登录页登录', 'success')
     setTimeout(() => {
-      toggle()
+      resetState()
       flag.value = true
     }, 1500)
   } else {
+    showPrompt('注册失败', 'error')
     flag.value = true
   }
 }
 
 const stateActive = () => {
-  if (state.value) {
-    login()
-  } else {
-    register()
-  }
+  state.value ? login() : register()
 }
 </script>
 
@@ -183,7 +182,7 @@ const stateActive = () => {
       </button>
       <div class="tip">
         {{ state ? '还没有' : '已有' }}账号？前往
-        <button @click="toggle">
+        <button @click="resetState">
           {{ state ? '注册' : '登录' }}
         </button>
       </div>

@@ -1,42 +1,41 @@
 <script setup>
 import router from '@/router'
 import showPrompt from '@/utils/promptBox'
-import { useUserStore, useThemeStore } from '@/stores'
+import { useUserStore, useSwitchStore } from '@/stores'
 import ToggleButton from '@/components/ToggleButton.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { useTemplateRef } from 'vue'
 
 const userStore = useUserStore()
-const themeStore = useThemeStore()
+const switchStore = useSwitchStore()
 
 const themeToggleRef = useTemplateRef('themeToggle')
 const toggle = () => {
   themeToggleRef.value.themeToggle()
 }
 
-const btn = () => {
+function logOut() {
   showPrompt('你确定要退出登录吗', 'error', {
     time: 5000,
     event: 'exit',
-    eventName: exitAccount
+    eventName: () => {
+      localStorage.removeItem('user')
+      router.go(0)
+    }
   })
-}
-const exitAccount = () => {
-  localStorage.removeItem('user')
-  router.go(0)
 }
 </script>
 
 <template>
   <div class="setting">
     <h3>个人设置</h3>
-    <button v-if="userStore.userId" @click="btn">退出登录</button>
+    <button v-if="userStore.userId" @click="logOut">退出登录</button>
     <h3>系统设置</h3>
     <div class="theme">
       <span>主题切换</span>
       <ThemeToggle style="display: none" ref="themeToggle"></ThemeToggle>
       <toggle-button
-        :theme="themeStore.theme"
+        :theme="switchStore.theme"
         @event="toggle"
         class="theme-btn"
       >

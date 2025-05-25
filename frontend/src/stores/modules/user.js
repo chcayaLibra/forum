@@ -1,54 +1,56 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { userCollectPostService, userPostListService } from '@/api/user'
+import { userCollectPidListService, userFollowListService } from '@/api/user'
 import { userInfoService } from '@/api/user'
 export const useUserStore = defineStore(
   'user',
   () => {
-    const token = ref()
-    const userId = ref()
-    const userPostList = ref()
-    const userInfo = ref()
-    const userCollectPost = ref()
+    const token = ref('')
+    const userId = ref('')
+    const userInfo = ref({})
+
+    const userFollowList = ref([])
+    const userCollectPidList = ref([])
 
     const setUserId = (value) => {
       userId.value = value
     }
 
-    const getUserPostList = async () => {
-      const res = await userPostListService({
-        userId: userId.value,
-        followId: userId.value
-      })
-      userPostList.value = res.data.data
-    }
-
     const getUserInfo = async () => {
       const res = await userInfoService({
-        userId: userId.value,
         followId: userId.value
       })
+      if (!res) return
       userInfo.value = res.data.data[0]
     }
 
-    const getUserCollectPost = async () => {
-      const res = await userCollectPostService({
+    const getUserFollowList = async () => {
+      const res = await userFollowListService(userId.value)
+      if (!res) return
+      const arr = res.data.data
+      const result = arr.map((item) => item.follow_id)
+      userFollowList.value = result
+    }
+
+    const getUserCollectPidList = async () => {
+      const res = await userCollectPidListService({
         userId: userId.value,
-        followId: userId.value
+        currentUserId: userId.value
       })
-      userCollectPost.value = res.data.data
+      if (!res) return
+      userCollectPidList.value = res.data.data.map((item) => item.p_id)
     }
 
     return {
       token,
       userId,
       userInfo,
-      userPostList,
-      userCollectPost,
+      userFollowList,
+      userCollectPidList,
       setUserId,
-      getUserPostList,
       getUserInfo,
-      getUserCollectPost
+      getUserFollowList,
+      getUserCollectPidList
     }
   },
   {

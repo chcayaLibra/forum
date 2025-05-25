@@ -7,10 +7,10 @@ document.body.appendChild(container)
 const img = imgInstance.mount(container)
 
 /**
- * 
+ *
  * @param {String} imgUrl 传入imgURL
  */
-const fullScreen = (imgUrl) => {
+function fullScreen(imgUrl) {
   if (imgUrl) {
     img.onFullScreen(imgUrl)
   }

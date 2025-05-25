@@ -1,7 +1,8 @@
 import axios from 'axios'
 import { useUserStore } from '@/stores'
 import showPrompt from './promptBox'
-const baseURL = 'http://localhost:3000'
+import router from '@/router'
+const baseURL = 'http://localhost:2053'
 
 const instance = axios.create({
   baseURL,
@@ -34,6 +35,10 @@ instance.interceptors.response.use(
     if (err.response && err.response.status === 400) {
       console.log(err.response.data)
       showPrompt(err.response.data.message, 'error')
+    }
+    if(err.response && err.response.status === 404) {
+      console.log('not found')
+      router.push('/notfound')
     }
   }
 )

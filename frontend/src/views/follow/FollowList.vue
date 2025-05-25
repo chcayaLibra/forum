@@ -19,8 +19,7 @@ import { escapeHTML } from '@/utils/safeContent'
 
 const route = useRoute()
 const userStore = useUserStore()
-const socket = io('wss://api.chcaya.christmas')
-// const socket = io('wss://localhost:2053')
+const socket = io('ws://localhost:2053')
 
 const username = ref('')
 const searchList = ref([])
@@ -37,15 +36,16 @@ const unreadCount = reactive({})
 
 const getUserList = async () => {
   const res = await followListService({ user_id: userStore.userId })
+  if (!res) return
   userList.value = res.data.data
 }
 getUserList()
 
 const getFollowInfo = async (followId) => {
   const res = await userInfoService({
-    userId: userStore.userId,
     followId
   })
+  if (!res) return
   followInfo.value = res.data.data[0]
   selectedFriend.value = followInfo.value.user_id
   await nextTick()
@@ -57,7 +57,7 @@ const getFollowInfo = async (followId) => {
   }
 }
 
-const toFollowDetail = (id) => {
+function navigateToFollowDetail(id) {
   const path = route.path
   const parts = path.split('/')
   const followId = parts[3]
@@ -72,6 +72,7 @@ const login = async () => {
   socket.emit('login', userStore.userId)
 
   const res = await followListService({ user_id: userStore.userId })
+  if (!res) return
   const arr = res.data.data.map((item) => item.follow_id)
   friends.value = arr
 
@@ -158,17 +159,15 @@ socket.on('receiveMessage', async ({ from, message }) => {
 watch(selectedFriend, async (friend) => {
   if (!friend) return
 
-  if (friend) {
-    const el = messageBox.value
-    if (el) {
-      el.style.scrollBehavior = 'auto'
-    }
-    await chatMarkAsReadService({ from: friend, to: userStore.userId })
-    unreadCount[friend] = 0
+  const el = messageBox.value
+  if (el) {
+    el.style.scrollBehavior = 'auto'
   }
+  await chatMarkAsReadService({ from: friend, to: userStore.userId })
   unreadCount[friend] = 0
 
   const res = await chatHistoryService(userStore.userId, friend)
+  if (!res) return
   const history = res.data.data
   chatRecords[friend] = history.map((msg) => ({
     from: msg.sender,
@@ -178,6 +177,7 @@ watch(selectedFriend, async (friend) => {
 
 const fetchUnread = async () => {
   const res = await chatUnreadService(userStore.userId)
+  if (!res) return
   const data = res.data.data
   data.forEach(({ sender, count }) => {
     unreadCount[sender] = count
@@ -185,11 +185,10 @@ const fetchUnread = async () => {
 }
 
 const scrollToBottom = () => {
-  if (selectedFriend.value) {
-    const el = messageBox.value
-    if (el) {
-      el.scrollTop = el.scrollHeight
-    }
+  if (!selectedFriend.value) return
+  const el = messageBox.value
+  if (el) {
+    el.scrollTop = el.scrollHeight
   }
 }
 
@@ -214,6 +213,7 @@ const inputUsername = () => {
     if (!username.value) return
     isShow.value = true
     const res = await followSearchServer({ username: username.value })
+    if (!res) return
     searchList.value = res.data.data
   }, 400)
 }
@@ -245,11 +245,11 @@ const clearResult = () => {
         <ul ref="ulRef" v-if="isShow">
           <li v-for="(item, index) in searchList" :key="index">
             <img
-              @click="toFollowDetail(item?.user_id)"
+              @click="navigateToFollowDetail(item?.user_id)"
               :src="baseURL + item?.user_avatar"
               alt=""
             />
-            <span @click="toFollowDetail(item?.user_id)">{{
+            <span @click="navigateToFollowDetail(item?.user_id)">{{
               item?.username
             }}</span>
           </li>
@@ -306,7 +306,7 @@ const clearResult = () => {
             @click="fullScreen(followInfo?.user_avatar)"
             :src="baseURL + followInfo?.user_avatar"
           />
-          <span :title="followInfo?.username" @click="toFollowDetail">{{
+          <span :title="followInfo?.username" @click="navigateToFollowDetail">{{
             followInfo?.username
           }}</span>
         </div>
@@ -365,10 +365,6 @@ $main-gap: 20px;
 $developed-area: 300px;
 .follow {
   padding: $main-gap;
-
-  @media (max-width: 376px) {
-    padding: 0;
-  }
 
   @media (max-width: 376px) {
     padding: 0;

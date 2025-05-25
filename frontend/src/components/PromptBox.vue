@@ -15,7 +15,7 @@ const eName = ref('')
 const eParams = ref('')
 const count = ref()
 
-const boxDisappear = () => {
+function boxDisappearAnimate() {
   xValue.value = getComputedStyle(tip.value).getPropertyValue('--x')
 
   tip.value.animate(
@@ -37,11 +37,11 @@ const boxDisappear = () => {
 
 let fn
 let flag = true
-const show = (
+function show(
   msg,
   type = 'normal',
   { time = 1500, pushPath, pathName, eventName, eventParams } = {}
-) => {
+) {
   types.value = type
   message.value = msg
   path.value = pushPath
@@ -53,6 +53,7 @@ const show = (
   if (time !== 1500) {
     if ((pushPath && pathName) || eventName) {
       count.value = time / 1000
+
       if (timerCount.value) clearInterval(timerCount.value)
       timerCount.value = setInterval(() => {
         if (count.value > 0) {
@@ -67,25 +68,23 @@ const show = (
 
   if (timer.value) clearTimeout(timer.value)
   timer.value = setTimeout(() => {
-    if (flag) boxDisappear()
+    if (flag) boxDisappearAnimate()
     flag = true
   }, time)
 }
 
 const execute = () => {
-  if (flag && eParams.value) {
-    fn(eParams.value)
-  } else if (flag) {
-    fn()
+  if (flag) {
+    eParams.value ? fn(eParams.value) : fn()
   }
   flag = false
-  boxDisappear()
+  boxDisappearAnimate()
 }
 
 const routerPush = () => {
   router.push(path.value)
   flag = false
-  boxDisappear()
+  boxDisappearAnimate()
 }
 
 defineExpose({
